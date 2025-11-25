@@ -1,0 +1,187 @@
+<!doctype html>
+<html lang="nl">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>hlphuis - admin</title>
+    <link rel="stylesheet" href="/static/styles.css">
+  </head>
+  <body>
+    <main>
+      <h1>Admin — gebruikersbeheer</h1>
+
+      <section>
+        <h2>Nieuwe gebruiker</h2>
+        <form id="user-create-form" data-user-id="">
+          <input id="u_email" type="email" placeholder="email" required />
+          <input id="u_password" placeholder="password" />
+          <input id="u_name" placeholder="naam" />
+          <input id="u_description" placeholder="toelichting" />
+          <label><input id="u_is_admin" type="checkbox" /> is admin</label>
+          <button type="submit">Opslaan</button>
+          <button type="button" id="user-create-cancel" style="display:none;">Annuleer</button>
+        </form>
+        <div id="user-create-result"></div>
+      </section>
+
+      <section>
+        <h2>Gebruikers</h2>
+        <button id="refresh-users">Ververs</button>
+        <ul id="users-list"></ul>
+      </section>
+
+      <section>
+        <h2>Ingevoerde lessen</h2>
+        <label>Filter docent: <select id="filter_user"></select></label>
+        <label>Van: <input id="filter_from" type="date" /></label>
+        <label>Tot: <input id="filter_to" type="date" /></label>
+        <button id="refresh-lessons">Ververs lessen</button>
+        <table id="lessons-table" border="1" style="width:100%; margin-top:0.5rem;">
+          <thead><tr><th>ID</th><th>Docent</th><th>Datum</th><th>Klant</th><th>Ontvangen</th><th>Aangemaakt</th></tr></thead>
+          <tbody></tbody>
+        </table>
+      </section>
+
+      <section>
+        <h2>Export</h2>
+        <label>Filter op gebruiker id: <input id="export_user_id" /></label>
+        <label>Van: <input id="export_from" type="date" /></label>
+        <label>Tot: <input id="export_to" type="date" /></label>
+        <button id="export-csv">Download CSV</button>
+      </section>
+
+    </main>
+    <script>
+      async function api(path, method='GET', body=null) {
+        const opts = { method, headers: {} };
+        if (body !== null) {
+          opts.headers['Content-Type'] = 'application/json';
+          opts.body = JSON.stringify(body);
+        }
+        const res = await fetch(path, opts);
+        return res.json();
+      }
+
+      document.getElementById('user-create-form').addEventListener('submit', async (e) => {
+        e.preventDefault();
+          const uid = document.getElementById('user-create-form').getAttribute('data-user-id');
+          const email = document.getElementById('u_email').value;
+        const password = document.getElementById('u_password').value;
+        const name = document.getElementById('u_name').value;
+        const description = document.getElementById('u_description').value;
+        const is_admin = document.getElementById('u_is_admin').checked;
+          let r;
+          if (uid) {
+            r = await api('/api/users/' + uid, 'PUT', { email, name, description, is_admin });
+            if (r.ok && password) {
+              await api('/api/users/' + uid + '/password', 'POST', { new_password: password });
+            }
+          } else {
+            if (!password) {
+              document.getElementById('user-create-result').textContent = 'Wachtwoord is vereist voor nieuwe gebruiker';
+              return;
+            }
+            r = await api('/api/users', 'POST', { email, password, name, description, is_admin });
+          }
+          document.getElementById('user-create-result').textContent = r.ok ? 'OK' : ('Fout: ' + (r.error||'onbekend'));
+          refreshUsers();
+          resetUserForm();
+        });
+
+        function resetUserForm() {
+          document.getElementById('user-create-form').setAttribute('data-user-id','');
+          document.getElementById('u_email').value = '';
+          document.getElementById('u_password').value = '';
+          document.getElementById('u_name').value = '';
+          document.getElementById('u_description').value = '';
+          document.getElementById('u_is_admin').checked = false;
+          document.getElementById('user-create-cancel').style.display = 'none';
+        }
+
+        document.getElementById('user-create-cancel').addEventListener('click', (e) => { resetUserForm(); });
+        refreshUsers();
+      });
+
+      async function refreshUsers() {
+        const r = await api('/api/users');
+        const list = document.getElementById('users-list');
+        list.innerHTML = '';
+        if (r.ok && Array.isArray(r.users)) {
+          r.users.forEach(u => {
+            const li = document.createElement('li');
+            const btn = document.createElement('button');
+            btn.textContent = `Bewerk`;
+            btn.style.marginLeft = '8px';
+            btn.addEventListener('click', () => {
+              // populate form for editing
+              document.getElementById('user-create-form').setAttribute('data-user-id', u.id);
+              document.getElementById('u_email').value = u.email || '';
+              document.getElementById('u_password').value = '';
+              document.getElementById('u_name').value = u.name || '';
+              document.getElementById('u_description').value = u.description || '';
+              document.getElementById('u_is_admin').checked = !!u.is_admin;
+              document.getElementById('user-create-cancel').style.display = 'inline-block';
+            });
+            li.textContent = `${u.id} — ${u.email || u.username || ''} — ${u.name || ''} ${u.is_admin ? '(admin)' : ''}`;
+            li.appendChild(btn);
+            list.appendChild(li);
+          });
+        }
+        // also populate filter selects
+        try {
+          const sel = document.getElementById('filter_user');
+          const sel2 = document.getElementById('export_user_id');
+          const sel3 = document.getElementById('filter_user');
+          if (sel) sel.innerHTML = '<option value="">(alle)</option>';
+          if (sel2) sel2.value = '';
+          if (sel3) sel3.value = '';
+          if (r.ok && Array.isArray(r.users)) {
+            r.users.forEach(u => {
+              const opt = document.createElement('option');
+              opt.value = u.id;
+              opt.textContent = u.name || u.username;
+              if (sel) sel.appendChild(opt.cloneNode(true));
+              if (sel2) {};
+            });
+          }
+        } catch(e){}
+      }
+
+      document.getElementById('refresh-users').addEventListener('click', refreshUsers);
+      document.getElementById('refresh-lessons').addEventListener('click', refreshLessons);
+      document.getElementById('export-csv').addEventListener('click', () => {
+        const uid = document.getElementById('export_user_id').value;
+        const from = document.getElementById('export_from').value;
+        const to = document.getElementById('export_to').value;
+        const params = new URLSearchParams();
+        if (uid) params.set('user_id', uid);
+        if (from) params.set('from_date', from);
+        if (to) params.set('to_date', to);
+        const url = '/api/lessons/export' + (params.toString() ? ('?' + params.toString()) : '');
+        window.location = url;
+      });
+
+      async function refreshLessons() {
+        const uid = document.getElementById('filter_user').value;
+        const from = document.getElementById('filter_from').value;
+        const to = document.getElementById('filter_to').value;
+        const params = new URLSearchParams();
+        if (uid) params.set('user_id', uid);
+        if (from) params.set('from_date', from);
+        if (to) params.set('to_date', to);
+        const r = await api('/api/lessons' + (params.toString() ? ('?' + params.toString()) : ''));
+        const tbody = document.querySelector('#lessons-table tbody');
+        tbody.innerHTML = '';
+        if (r.ok && Array.isArray(r.lessons)) {
+          r.lessons.forEach(l => {
+            const tr = document.createElement('tr');
+            tr.innerHTML = `<td>${l.id}</td><td>${l.user_name||''}</td><td>${l.date}</td><td>${l.customer_name}</td><td>${l.amount}</td><td>${l.created_at}</td>`;
+            tbody.appendChild(tr);
+          });
+        }
+      }
+
+      refreshUsers();
+    </script>
+  </body>
+</html>
