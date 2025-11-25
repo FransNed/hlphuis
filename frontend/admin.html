@@ -9,9 +9,14 @@
   <body>
     <main>
       <h1>Admin — gebruikersbeheer</h1>
-      <nav style="margin-bottom:1rem;">
-        <button id="nav-users">Gebruikers</button>
-        <button id="nav-records">Bestand</button>
+      <nav style="margin-bottom:1rem; display:flex; gap:0.5rem; align-items:center;">
+        <div class="nav" style="flex:1;">
+          <button id="nav-users">Gebruikers</button>
+          <button id="nav-records">Bestand</button>
+        </div>
+        <div>
+          <button id="btn-logout" class="secondary">Uitloggen</button>
+        </div>
       </nav>
 
       <section id="user-form-section">
@@ -85,6 +90,14 @@
         if (nu) nu.addEventListener('click', () => showPage('users'));
         if (nr) nr.addEventListener('click', () => showPage('records'));
         showPage('users');
+        const btnLogout = document.getElementById('btn-logout');
+        if (btnLogout) btnLogout.addEventListener('click', async () => {
+          try {
+            await api('/api/logout', 'POST');
+          } catch (e) {}
+          // go to a blank logout page
+          window.location = '/logout.html';
+        });
       });
 
       document.getElementById('user-create-form').addEventListener('submit', async (e) => {
