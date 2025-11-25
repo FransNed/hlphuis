@@ -9,8 +9,12 @@
   <body>
     <main>
       <h1>Admin — gebruikersbeheer</h1>
+      <nav style="margin-bottom:1rem;">
+        <button id="nav-users">Gebruikers</button>
+        <button id="nav-records">Bestand</button>
+      </nav>
 
-      <section>
+      <section id="user-form-section">
         <h2>Nieuwe gebruiker</h2>
         <form id="user-create-form" data-user-id="">
           <input id="u_email" type="email" placeholder="email" required />
@@ -24,13 +28,13 @@
         <div id="user-create-result"></div>
       </section>
 
-      <section>
+      <section id="users-section">
         <h2>Gebruikers</h2>
         <button id="refresh-users">Ververs</button>
         <ul id="users-list"></ul>
       </section>
 
-      <section>
+      <section id="records-section">
         <h2>Ingevoerde lessen</h2>
         <label>Filter docent: <select id="filter_user"></select></label>
         <label>Van: <input id="filter_from" type="date" /></label>
@@ -42,7 +46,7 @@
         </table>
       </section>
 
-      <section>
+      <section id="export-section">
         <h2>Export</h2>
         <label>Filter op gebruiker id: <input id="export_user_id" /></label>
         <label>Van: <input id="export_from" type="date" /></label>
@@ -61,6 +65,27 @@
         const res = await fetch(path, opts);
         return res.json();
       }
+
+      // simple page navigation for admin UI
+      function showPage(p) {
+        const users = ['user-form-section','users-section'];
+        const records = ['records-section','export-section'];
+          users.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = (p === 'users') ? 'block' : 'none';
+          });
+          records.forEach(id => {
+            const el = document.getElementById(id);
+            if (el) el.style.display = (p === 'records') ? 'block' : 'none';
+          });
+      }
+      document.addEventListener('DOMContentLoaded', () => {
+        const nu = document.getElementById('nav-users');
+        const nr = document.getElementById('nav-records');
+        if (nu) nu.addEventListener('click', () => showPage('users'));
+        if (nr) nr.addEventListener('click', () => showPage('records'));
+        showPage('users');
+      });
 
       document.getElementById('user-create-form').addEventListener('submit', async (e) => {
         e.preventDefault();

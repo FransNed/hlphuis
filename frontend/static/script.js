@@ -16,9 +16,12 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const out = document.getElementById('login-result');
   if (r.ok) {
     out.textContent = 'Ingelogd als ' + (r.email || r.id);
-    document.getElementById('form-section').style.display = 'block';
-    loadUsers();
-    loadLessons();
+    if (r.is_admin) {
+      // redirect admin to admin UI
+      window.location = '/admin.html';
+    } else {
+      out.textContent = 'Ingelogd, maar je hebt geen admin-rechten.';
+    }
   } else {
     out.textContent = 'Login fout: ' + (r.error || 'onbekend');
   }

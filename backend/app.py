@@ -51,7 +51,7 @@ def create_app():
         user = User.query.filter_by(email=email).first()
         if user and user.check_password(password):
             login_user(user)
-            return jsonify({'ok': True, 'email': user.email, 'id': user.id})
+            return jsonify({'ok': True, 'email': user.email, 'id': user.id, 'is_admin': bool(user.is_admin)})
         return jsonify({'ok': False, 'error': 'invalid credentials'}), 401
 
     @app.route('/api/logout', methods=['POST'])
