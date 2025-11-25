@@ -21,6 +21,7 @@
 
       <section id="user-form-section">
         <h2>Nieuwe gebruiker</h2>
+        <div id="toast" class="toast" style="display:none"></div>
         <form id="user-create-form" data-user-id="">
           <input id="u_email" type="email" placeholder="email" required />
           <input id="u_password" placeholder="password" />
@@ -69,6 +70,17 @@
         }
         const res = await fetch(path, opts);
         return res.json();
+      }
+
+      function showMessage(text, type='info', timeout=3000) {
+        try {
+          const t = document.getElementById('toast');
+          if (!t) return;
+          t.textContent = text;
+          t.className = 'toast show ' + (type==='success'? 'success' : (type==='error' ? 'error' : ''));
+          t.style.display = 'block';
+          setTimeout(()=>{ t.className = 'toast'; setTimeout(()=>t.style.display='none',250); }, timeout);
+        } catch(e){}
       }
 
       // simple page navigation for admin UI
@@ -121,7 +133,16 @@
             }
             r = await api('/api/users', 'POST', { email, password, name, description, is_admin });
           }
-          document.getElementById('user-create-result').textContent = r.ok ? 'OK' : ('Fout: ' + (r.error||'onbekend'));
+          const inline = document.getElementById('user-create-result');
+          if (r && r.ok) {
+            inline.className = 'inline-ok';
+            inline.textContent = 'OK';
+            showMessage('Gebruiker succesvol opgeslagen', 'success');
+          } else {
+            inline.className = 'inline-error';
+            inline.textContent = 'Fout: ' + (r && r.error ? r.error : 'onbekend');
+            showMessage('Fout: ' + (r && r.error ? r.error : 'onbekend'), 'error');
+          }
           refreshUsers();
           resetUserForm();
         });

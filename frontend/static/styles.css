@@ -17,3 +17,27 @@ button.secondary { background:#6b7280 }
 .nav { display:flex; gap:0.5rem; margin-bottom:1rem }
 .nav button { background:#fff; color:var(--accent); border:1px solid #e2e8f0 }
 .nav button.active { background:var(--accent); color:#fff }
+
+/* toast notifications */
+.toast {
+	position: fixed;
+	right: 1rem;
+	top: 1rem;
+	min-width: 200px;
+	padding: 0.6rem 0.9rem;
+	border-radius: 8px;
+	background: rgba(17,24,39,0.95);
+	color: #fff;
+	box-shadow: 0 6px 18px rgba(15,23,42,0.2);
+	opacity: 0;
+	transform: translateY(-6px);
+	transition: opacity 220ms ease, transform 220ms ease;
+	z-index: 9999;
+}
+.toast.show { opacity: 1; transform: translateY(0); }
+.toast.success { background: #16a34a }
+.toast.error { background: #dc2626 }
+
+/* small inline error */
+.inline-error { color: #b91c1c; font-weight:600; margin-top:0.4rem }
+.inline-ok { color: #065f46; font-weight:600; margin-top:0.4rem }
