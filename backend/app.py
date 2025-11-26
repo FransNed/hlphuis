@@ -198,6 +198,17 @@ def create_app():
         db.session.commit()
         return jsonify({'ok': True})
 
+    @app.route('/api/users/<int:user_id>', methods=['GET'])
+    @login_required
+    def get_user(user_id):
+        u = User.query.get(user_id)
+        if not u:
+            return jsonify({'ok': False, 'error': 'user not found'}), 404
+        # only admin or owner
+        if not (current_user.is_admin or current_user.id == u.id):
+            return jsonify({'ok': False, 'error': 'forbidden'}), 403
+        return jsonify({'ok': True, 'user': {'id': u.id, 'email': u.email, 'username': u.username, 'name': u.name, 'description': u.description, 'is_admin': bool(u.is_admin)}})
+
     @app.route('/api/users/<int:user_id>/password', methods=['POST'])
     @login_required
     def change_password(user_id):

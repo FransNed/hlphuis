@@ -8,6 +8,8 @@ async function api(path, method='GET', body=null) {
   return res.json();
 }
 
+let currentUserId = null;
+
 document.getElementById('login-form').addEventListener('submit', async (e) => {
   e.preventDefault();
   const email = document.getElementById('email').value;
@@ -16,12 +18,20 @@ document.getElementById('login-form').addEventListener('submit', async (e) => {
   const out = document.getElementById('login-result');
   if (r.ok) {
     out.textContent = 'Ingelogd als ' + (r.email || r.id);
+    currentUserId = r.id;
     if (r.is_admin) {
       // redirect admin to admin UI
       window.location = '/admin.html';
-    } else {
-      out.textContent = 'Ingelogd, maar je hebt geen admin-rechten.';
+      return;
     }
+    // non-admin: show lesson form and profile
+    document.getElementById('form-section').style.display = 'block';
+    document.getElementById('profile-section').style.display = 'block';
+    loadUsers().then(()=>{
+      try { document.getElementById('user_select').value = currentUserId; } catch(e){}
+    });
+    loadLessons();
+    loadProfile();
   } else {
     out.textContent = 'Login fout: ' + (r.error || 'onbekend');
   }
@@ -62,6 +72,7 @@ async function loadUsers() {
     const r = await api('/api/users_simple');
     if (r.ok && Array.isArray(r.users)) {
       const sel = document.getElementById('user_select');
+      if (!sel) return;
       sel.innerHTML = '';
       r.users.forEach(u => {
         const opt = document.createElement('option');
@@ -69,6 +80,10 @@ async function loadUsers() {
         opt.textContent = u.name || u.username;
         sel.appendChild(opt);
       });
+      // if currentUserId is set, try to select it
+      if (typeof currentUserId === 'number') {
+        try { sel.value = currentUserId; } catch(e){}
+      }
     }
   } catch (e) {}
 }
@@ -85,6 +100,44 @@ async function loadLessons() {
     });
   }
 }
+
+async function loadProfile() {
+  if (!currentUserId) return;
+  try {
+    const r = await api('/api/users/' + currentUserId);
+    if (r.ok && r.user) {
+      document.getElementById('p_email').value = r.user.email || '';
+      document.getElementById('p_name').value = r.user.name || '';
+      document.getElementById('p_description').value = r.user.description || '';
+    }
+  } catch(e){}
+}
+
+document.getElementById('p_save') && document.getElementById('p_save').addEventListener('click', async () => {
+  if (!currentUserId) return;
+  const email = document.getElementById('p_email').value;
+  const name = document.getElementById('p_name').value;
+  const description = document.getElementById('p_description').value;
+  const r = await api('/api/users/' + currentUserId, 'PUT', { email, name, description });
+  if (r.ok) {
+    alert('Profiel opgeslagen');
+  } else {
+    alert('Fout: ' + (r.error||'onbekend'));
+  }
+});
+
+document.getElementById('profile-password-form') && document.getElementById('profile-password-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  if (!currentUserId) return;
+  const oldp = document.getElementById('old_password').value;
+  const newp = document.getElementById('new_password').value;
+  const r = await api('/api/users/' + currentUserId + '/password', 'POST', { old_password: oldp, new_password: newp });
+  if (r.ok) {
+    alert('Wachtwoord gewijzigd');
+  } else {
+    alert('Fout: ' + (r.error||'onbekend'));
+  }
+});
 
 // try load on open (will work if public endpoint)
 loadLessons().catch(()=>{});
